@@ -8,14 +8,11 @@ Solana 开发者 | Web3 布道者
 
 ## 📱 联系方式
 
-### 微信公众号
-> 请填写您的微信公众号名称
-
 ### 微信号
-> 请填写您的个人微信号
+**zgrbuce**
 
 ### Twitter / X
-> 请填写您的 Twitter 用户名，如 @your_handle
+**[@sycbruce](https://twitter.com/sycbruce)**
 
 ### GitHub
 - **个人主页**: https://github.com/CwyGit
