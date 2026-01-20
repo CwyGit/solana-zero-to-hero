@@ -1,0 +1,162 @@
+# 高级功能
+
+Surfnet 不仅仅是将主网复制到本地网络，它还允许您通过更改账户、系统变量和区块链状态来增强和修改 Solana 的核心功能。
+
+这些修改通过对 Surfnet 的 RPC 调用实现，既可以通过编程方式（用于自动化测试环境）进行更改，也可以通过终端命令（用于一次性操作）进行更改。
+
+在代码中执行 RPC 调用，请使用：
+
+```ts
+const surfnetCall = {
+    "jsonrpc": "2.0",
+    "id": 1,
+    "method": "<surfnet-method>",
+    "params": [<surfnet-method-params]
+}
+
+await fetch(connection.rpcEndpoint, {
+    method: 'POST',
+    headers: {
+        'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(surfnetCall)
+});
+```
+
+在终端中执行 RPC 调用，请使用：
+
+```bash
+curl -X POST \
+    -H "Content-Type: application/json" \
+    -d '{
+        "jsonrpc": "2.0",
+        "id": 1,
+        "method": "<surfnet-method>",
+        "params": [<surfnet-method-params]
+    }' \
+    http://localhost:8899
+```
+
+### 时间旅行
+
+使用 `surfnet_timeTravel` 方法跳转到区块链历史中的任意时间点。这对于测试您的程序在不同网络状态下的表现或重现特定时间发生的错误非常有价值。
+
+指定以下之一：`absoluteEpoch`、`absoluteSlot` 或 `absoluteTimestamp`，如下所示：
+
+```ts
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "surfnet_timeTravel",
+  "params": [
+    {
+      "absoluteEpoch": 0
+    }
+  ]
+}
+```
+
+### 暂停和恢复区块生成
+
+控制区块进程以逐步调试交易或测试时间敏感的逻辑。使用 `surfnet_pauseClock` 暂停区块生成，使用 `surfnet_resumeClock` 恢复：
+
+```ts
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "surfnet_pauseClock", // or "surfnet_resumeClock"
+  "params": []
+}
+```
+
+### 设置 SOL 参数
+
+配置 SOL 供应参数以测试经济场景或边界情况。
+
+`surfnet_setSupply` 方法接受 `circulating`、`nonCirculating`、`nonCirculatingAccounts` 和 `total` 参数：
+
+```ts
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "surfnet_setSupply",
+  "params": [
+    {
+      "circulating": 1000000000,
+      "nonCirculating": 1000000000,
+      "nonCirculatingAccounts": [],
+      "total": 1000000000
+    }
+  ]
+}
+```
+
+### 在程序之间转移账户
+
+使用 `surfnet_cloneProgramAccount` 克隆程序账户，从一个程序转移到另一个程序。这对于测试程序升级或在不同程序版本之间迁移状态非常有用。
+
+需要同时提供 `destinationProgramId` 和 `sourceProgramId`：
+
+```ts
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "surfnet_cloneProgramAccount",
+  "params": [
+    {
+      "destinationProgramId": "string",
+      "sourceProgramId": "string"
+    }
+  ]
+}
+```
+
+### 更新账户数据
+
+> 使用以下方法更新已存在的账户将会覆盖账户状态
+
+使用`surfnet_setAccount`修改任何账户的属性，包括 lamports、数据、所有者和可执行状态。
+
+该方法需要一个`pubkey`，并接受以下可选字段：`data`、`executable`、`lamports`、`owner` 和 `rentEpoch`：
+
+```ts
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "surfnet_setAccount",
+  "params": [
+    "1111111QLbz7JHiBTspS962RLKV8GndWFwiEaqKM",
+    {
+      "data": "0x123456",
+      "executable": false,
+      "lamports": 1000000000,
+      "owner": "11111111111111111111111111111111",
+      "rentEpoch": 0
+    }
+  ]
+}
+```
+
+此外，对于代币账户的修改，可以使用专门的`surfnet_setTokenAccount`方法，该方法简化了代币账户数据的更改。
+
+需要`owner`和`mint`参数，并接受以下可选字段：`amount`、`closeAuthority`、`delegate`、`delegateAmount`、`state` 和 `tokenProgram`：
+
+```ts
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "surfnet_setTokenAccount",
+  "params": [
+    "1111111ogCyDbaRMvkdsHB3qfdyFYaG1WtRUAfdh",
+    "11111112D1oxKts8YPdTJRG5FzxTNpMtWmq8hkVx3",
+    {
+      "amount": 1000000000,
+      "closeAuthority": "111111131h1vYVSYuKP6AhS86fbRdMw9XHiZAvAaj",
+      "delegate": "11111112cMQwSC9qirWGjZM6gLGwW69X22mqwLLGP",
+      "delegatedAmount": 1000000000,
+      "state": "initialized"
+    },
+    "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+  ]
+}
+```

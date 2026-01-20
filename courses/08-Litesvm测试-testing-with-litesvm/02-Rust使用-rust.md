@@ -1,0 +1,290 @@
+# 使用 Rust 的 LiteSVM
+
+`litesvm` 包提供了核心测试基础设施，用于创建一个轻量级的 Solana 环境，在该环境中您可以直接操作账户状态并针对您的程序执行交易。
+
+将 LiteSVM 添加到您的项目中：
+
+```bash
+cargo add --dev litesvm
+```
+
+首先声明您的程序 ID 并创建一个 LiteSVM 实例。
+
+使用您在程序中定义的完全相同的程序 ID，以确保交易正确执行并且在测试期间不会抛出 `ProgramMismatch` 错误：
+
+```rust
+use litesvm::LiteSVM;
+use solana_pubkey::{pubkey, Pubkey};
+
+const program_id: Pubkey = pubkey!("22222222222222222222222222222222222222222222");
+
+#[test]
+fn test() {
+    // Create a new instance of LiteSVM
+    let mut svm = LiteSVM::new();
+
+    // Load the program with the right publickey
+    svm.add_program_from_file(program_id, "target/deploy/program.so");
+}
+```
+
+要执行测试，请创建一个交易对象并使用 `.send_transaction(tx)` 函数：
+
+```rust
+use litesvm::LiteSVM;
+use solana_transaction::Transaction;
+
+#[test]
+fn test() {
+    // Create a new instance of LiteSVM
+    let mut svm = LiteSVM::new();
+
+    // Create a new Transaction
+    let mut tx = Transaction::new_signed_with_payer(
+        &[...ixs],
+        Some(&payer.pubkey()),
+        &[...signersKeypair],
+        svm.latest_blockhash(),
+    );
+
+    // Send the Transaction
+    let result = svm.send_transaction(tx).unwrap();
+}
+```
+
+在使用 LiteSVM 测试 Solana 程序时，您将处理多种类型的账户，这些账户反映了真实世界的程序执行场景。
+
+正确构建这些账户对于有效测试至关重要。
+
+### 系统账户
+
+最基本的账户类型是系统账户，主要有两种变体：
+- **付款账户**：拥有 lamports 的账户，用于资助程序账户的创建或 lamport 转账
+- **未初始化账户**：没有 lamports 的空账户，通常用于表示等待初始化的程序账户
+
+系统账户不包含数据，并由系统程序（System Program）拥有。付款账户和未初始化账户的关键区别在于它们的 lamport 余额：付款账户有资金，而未初始化账户从空开始。
+
+以下是在 LiteSVM 中创建 `payer` 账户的方法：
+
+```rust
+use litesvm::LiteSVM;
+use solana_account::Account;
+use solana_keypair::Keypair;
+use solana_pubkey::{pubkey, Pubkey};
+
+#[test]
+fn test() {
+    // Create a new instance of LiteSVM
+    let mut svm = LiteSVM::new();
+
+    // Create a new Account
+    let account = Keypair::new();
+
+    // Add the Account with the modified data
+    svm.set_account(
+        account.pubkey(),
+        Account {
+            lamports: 100_000_000,
+            data: [],
+            owner: ID,
+            executable: false,
+            rent_epoch: 0,
+        },
+    );
+}
+```
+
+> 未初始化账户只是一个普通的生成账户，具有 `Keypair.generate()` - 无需额外设置。
+
+### 程序账户
+
+对于包含自定义数据结构的程序账户，您可以使用类似的方法。
+您还需要将账户数据序列化为字节数组，这可以手动完成，也可以使用诸如 `borsh`、`bincode` 或 `solana_program_pack` 等库来完成。
+
+```rust
+use litesvm::LiteSVM;
+use solana_account::Account;
+use solana_keypair::Keypair;
+use solana_pubkey::{pubkey, Pubkey};
+
+#[test]
+fn test() {
+    // Create a new instance of LiteSVM
+    let mut svm = LiteSVM::new();
+
+    // Create a new Account
+    let account = Keypair::new();
+
+    let mut account_data = [0; SIZE_OF_THE_ACCOUNT];
+
+    // Serialize the account data into the byte array defined above
+    // ...
+
+    let lamports = svm.minimum_balance_for_rent_exemption(SIZE_OF_THE_ACCOUNT);
+
+    // Add the Account with the modified data
+    svm.set_account(
+        account.pubkey(),
+        Account {
+            lamports,
+            data: account_data,
+            owner: ID,
+            executable: false,
+            rent_epoch: 0,
+        },
+    )
+}
+```
+
+> 在测试中，您无需计算精确的租金。您可以将 lamports 设置为一个较大的值，例如 `100_000_000_000`，并跳过租金计算，因为这些并不是真实的资金。
+
+### 代币账户
+
+要序列化 SPL 代币账户的数据，您可以使用 `spl_token::Mint` 和 `spl_token::Account`，它们实现了 `solana_program_pack::Pack`。
+
+```rust
+use litesvm::LiteSVM;
+use solana_keypair::Keypair;
+use solana_pubkey::{pubkey, Pubkey};
+use solana_account::Account;
+use spl_token::{ID as TOKEN_PROGRAM_ID, state::{Mint, Account as TokenAccount}};
+use solana_program_pack::Pack;
+
+#[test]
+fn test() {
+    // Create a new instance of LiteSVM
+    let mut svm = LiteSVM::new();
+
+    // Create a new Mint Account
+    let mint = Keypair::new();
+
+    // Populate the data of the Mint Account
+    let mint_data = Mint {
+        mint_authority: None.into(),
+        supply: 0,
+        decimals: 6,
+        is_initialized: true,
+        freeze_authority: None.into(),
+    };
+
+    let mut mint_account_data = vec![0; Mint::LEN];
+    Mint::pack(mint_data, &mut mint_account_data).unwrap();
+
+    // Grab the minimum amount of lamports to make it rent exempt
+    let lamports = svm.minimum_balance_for_rent_exemption(Mint::LEN);
+
+    // Add the Mint Account
+    svm.set_account(
+        mint.pubkey(),
+        Account {
+            lamports,
+            data: mint_account_data,
+            owner: TOKEN_PROGRAM_ID,
+            executable: false,
+            rent_epoch: 0,
+        },
+    );
+
+    // Create a new Token Account
+    let token_account = Keypair::new();
+    let owner = Keypair::new();
+
+    // Populate the data of the Token Account
+    let token_account_data = TokenAccount {
+        mint: mint.pubkey(),
+        owner: owner.pubkey(),
+        amount: 0,
+        delegate: None.into(),
+        state: spl_token::state::AccountState::Initialized,
+        is_native: None.into(),
+        delegated_amount: 0,
+        close_authority: None.into(),
+    };
+
+    let mut token_account_data_bytes = vec![0; TokenAccount::LEN];
+    TokenAccount::pack(token_account_data, &mut token_account_data_bytes).unwrap();
+
+    // Grab the minimum amount of lamports to make it rent exempt
+    let lamports = svm.minimum_balance_for_rent_exemption(TokenAccount::LEN);
+
+    // Add the Token Account
+    svm.set_account(
+        token_account.pubkey(),
+        Account {
+            lamports,
+            data: token_account_data_bytes,
+            owner: TOKEN_PROGRAM_ID,
+            executable: false,
+            rent_epoch: 0,
+        },
+    );
+}
+```
+
+在创建账户并将其添加到您的 LiteSVM 实例后，您现在可以发送交易并验证您的程序逻辑。
+
+在发送交易之前，您可以模拟结果：
+
+```rust
+let simulated_result = svm.simulate_transaction(tx);
+```
+
+然后发送交易并检查其日志：
+
+```rust
+let result = svm.send_transaction(tx);
+let logs = result.logs;
+```
+
+### 高级功能
+
+在执行之前和之后，您 LiteSVM 实例中包含的整个账本都是可读和可自定义的。
+
+您可以操作 sysvar 值，例如时钟：
+
+```rust
+// Change the Clock
+let mut new_clock = svm.get_sysvar::<Clock>();
+new_clock.unix_timestamp = 1735689600;
+svm.set_sysvar::<Clock>(&new_clock);
+
+// Jump to a certain Slot
+svm.warp_to_slot(500);
+
+// Expire the current blockhash
+svm.expire_blockhash();
+```
+
+您还可以读取账户和协议数据：
+
+```rust
+// Get all the information about an account (data, lamports, owner, ...)
+svm.get_account(&account.publickey);
+
+// Get the lamport balance of an account
+svm.get_balance(&account.publickey);
+
+// Get the number of Compute Unit used till now
+svm.get_compute_budget();
+```
+
+或者配置运行时的行为：
+
+```rust
+// Sets the compute budget
+let compute_budget = ComputeBudget::default();
+compute_budget.compute_unit_limit = 2_000_000;
+svm.with_compute_budget(compute_budget);
+
+// Sets Sigverify as active
+svm.with_sigverify(true);
+
+// Sets the Blockhash check as active
+svm.with_blockhash_check(true);
+
+// Sets the default Sysvars
+svm.with_sysvars();
+
+// Set the FeatureSet to use
+svm.with_feature_set(FeatureSet::default())
+```

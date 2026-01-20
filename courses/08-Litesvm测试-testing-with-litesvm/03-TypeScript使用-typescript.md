@@ -1,0 +1,262 @@
+# 使用 TypeScript 的 LiteSVM
+
+`litesvm` 包提供了核心测试基础设施，用于创建一个轻量级的 Solana 环境，您可以在其中直接操作账户状态并针对您的程序执行交易。
+
+将 LiteSVM 添加到您的项目中：
+
+```bash
+npm i --save-dev litesvm
+```
+
+首先声明您的程序 ID 并创建一个 LiteSVM 实例。
+
+使用您在程序中定义的完全相同的程序 ID，以确保交易正确执行并在测试期间不会抛出 `ProgramMismatch` 错误：
+
+```ts
+
+const programId = new PublicKey("22222222222222222222222222222222222222222222");
+
+describe("test", () => {
+    // Create a new instance of LiteSVM
+    const svm = new LiteSVM();
+
+    // Load the program with the right public key
+    svm.addProgramFromFile(programId, "target/deploy/program.so");
+})
+```
+
+要执行测试，请创建一个交易对象并使用 `.sendTransaction(tx)` 函数：
+
+```ts
+
+describe("test", () => {
+    // Create a new instance of LiteSVM
+    const svm = new LiteSVM();
+
+    // Create a new Transaction
+    const tx = new Transaction();
+
+    // Add the latest blockhash
+    tx.recentBlockhash = svm.latestBlockhash();
+
+    // Add the instructions and the signers
+    // tx.add(...ixs);
+    // tx.sign(...signersKeypair);
+
+    // Send the transaction
+    svm.sendTransaction(tx);
+})
+```
+
+在使用 LiteSVM 测试 Solana 程序时，您将处理几种类型的账户，这些账户反映了真实世界的程序执行场景。
+
+正确构建这些账户对于有效测试至关重要。
+
+### 系统账户
+
+最基本的账户类型是系统账户，主要有两种变体：
+- **付款账户**：拥有 lamports 的账户，用于资助程序账户创建或 lamport 转账
+- **未初始化账户**：没有 lamports 的空账户，通常用于表示等待初始化的程序账户
+
+系统账户不包含数据，并由系统程序拥有。付款账户和未初始化账户的关键区别在于它们的 lamport 余额：付款账户有资金，而未初始化账户从空开始。
+
+以下是在 LiteSVM 中创建 `payer` 账户的方法：
+
+```ts
+
+describe("test", () => {
+    // Create a new instance of LiteSVM
+    const svm = new LiteSVM();
+
+    // Create a new Account
+    const account = Keypair.generate();
+
+    // Add the Account with the modified data
+    svm.setAccount(account.publicKey, {
+        lamports: 100_000_000,
+        data: Buffer.alloc(0),
+        owner: SystemProgram.programId,
+        executable: false,
+    }); 
+})
+```
+
+> 未初始化账户只是一个普通的生成账户，具有 `Keypair.generate()` - 无需额外设置。
+
+### 程序账户
+
+对于包含自定义数据结构的程序账户，您可以使用类似的方法。
+您还需要将账户数据序列化到缓冲区中，这可以手动完成，也可以使用诸如 `@coral-xyz/borsh` 之类的库（参见示例 [这里](https://solana.com/developers/courses/native-onchain-development/serialize-instruction-data-frontend)）。
+
+```ts
+
+describe("test", () => {
+    // Create a new instance of LiteSVM
+    const svm = new LiteSVM();
+
+    // Create a new Account
+    const account = Keypair.generate();
+
+    // Populate the data of the Account
+    const accountData = Buffer.alloc(SIZE_OF_THE_ACCOUNT);
+
+    // Serialize the account data into the byte buffer defined above
+    // ...
+
+    // Grab the minimum amount of lamports to make it rent exempt
+    const lamports = svm.minimumBalanceForRentExemption(SIZE_OF_THE_ACCOUNT);
+
+    // Add the Account with the modified data
+    svm.setAccount(account.publicKey, {
+        lamports,
+        data: accountData,
+        owner: PROGRAM_ID,
+        executable: false,
+    });
+})
+```
+
+> 在测试中，您无需计算精确的租金。您可以将 lamports 设置为一个较大的值，例如 `100_000_000_000`，并跳过租金计算，因为这些并不是真实的资金。
+
+### 代币账户
+
+要序列化 SPL 代币账户的数据，您可以使用 `AccountLayout` 和 `MintLayout`，它们来自 `@solana/spl-token`。
+
+```ts
+
+describe("test", () => {
+    // Create a new instance of LiteSVM
+    const svm = new LiteSVM();
+
+    const owner = Keypair.generate();
+
+    // Create a new Mint Account
+    const mint = Keypair.generate();
+
+    // Populate the data of the Mint Account
+    let mintData = Buffer.alloc(MINT_SIZE);
+    MintLayout.encode(
+        {
+          mintAuthorityOption: 1,
+          mintAuthority: owner.publicKey,
+          supply: BigInt(0),
+          decimals: 0,
+          isInitialized: true,
+          freezeAuthorityOption: 0,
+          freezeAuthority: PublicKey.default,
+        },
+        mintData
+    )
+
+    // Grab the minimum amount of lamports to make it rent exempt
+    const lamports = svm.minimumBalanceForRentExemption(MINT_SIZE);
+
+    // Add the Account with the modified data
+    svm.setAccount(mint.publicKey, {
+        lamports,
+        data: mintData,
+        owner: TOKEN_PROGRAM_ID,
+        executable: false,
+    });
+
+    // Create a new Token Account
+    const tokenAccount = Keypair.generate();
+
+    // Populate the data of the Token Account
+    const tokenAccountData = Buffer.alloc(ACCOUNT_SIZE);
+    AccountLayout.encode(
+        {
+            mint: mint.publicKey,
+            owner: owner.publicKey,
+            amount: BigInt(100),
+            delegateOption: 0,
+            delegate: PublicKey.default,
+            delegatedAmount: BigInt(0),
+            state: 1,
+            isNativeOption: 0,
+            isNative: BigInt(0),
+            closeAuthorityOption: 0,
+            closeAuthority: PublicKey.default,
+        },
+        tokenAccountData,
+    );
+
+    // Grab the minimum amount of lamports to make it rent exempt
+    const lamports = svm.minimumBalanceForRentExemption(ACCOUNT_SIZE);
+
+    // Add the Account with the modified data
+    svm.setAccount(tokenAccount.publicKey, {
+        lamports,
+        data: tokenAccountData,
+        owner: TOKEN_PROGRAM_ID,
+        executable: false,
+    });
+})
+```
+
+在创建账户并将其添加到您的 LiteSVM 实例后，您现在可以发送交易并验证您的程序逻辑。
+
+在发送交易之前，您可以模拟结果：
+
+```ts
+// Simulate before executing
+const simulatedResult = svm.simulateTransaction(tx);
+```
+
+然后发送交易并检查其日志：
+
+```ts
+// Execute and inspect logs
+const result = svm.sendTransaction(tx);
+console.log(result.logs);
+```
+
+### 高级功能
+
+在执行之前和之后，您 LiteSVM 实例中包含的整个账本都是可读和可自定义的。
+
+您可以操作 sysvar 值，例如时钟：
+
+```ts
+// Change the Clock
+const newClock = svm.getClock();
+newClock.unixTimestamp = 50n;
+svm.setClock(newClock);
+
+// Jump to a certain Slot
+svm.warpToSlot(500);
+
+// Expire the current blockhash
+svm.expireBlockhash();
+```
+
+您还可以读取账户和协议数据：
+
+```ts
+// Get all the information about an account (data, lamports, owner, ...)
+svm.getAccount(account.publicKey);
+
+// Get the lamport balance of an account
+svm.getBalance(account.publicKey);
+```
+
+或者配置运行时的行为：
+
+```ts
+// Sets the compute budget
+const computeBudget = new ComputeBudget();
+computeBudget.computeUnitLimit = 2_000_000n;
+svm.withComputeBudget(computeBudget);
+
+// Sets Sigverify as active
+svm.withSigverify(true);
+
+// Sets the Blockhash check as active
+svm.withBlockhashCheck(true);
+
+// Sets the default Sysvars
+svm.withSysvars();
+
+// Set the FeatureSet to use
+svm.withFeatureSet(new FeatureSet(...))
+```
