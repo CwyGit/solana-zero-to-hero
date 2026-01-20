@@ -1,4 +1,4 @@
-# 02-交易请求 - Transaction Request！📋
+﻿# 02-交易请求 - Transaction Request！📋
 
 嘿，小伙伴！👋
 
@@ -36,4 +36,4 @@ const txRequest = encodeURL({
 ---
 
 **最后更新**：2026年1月10日  
-**制作风格**：莫式风格
+**制作人**：bruceCao

@@ -1,4 +1,4 @@
-# 01-Token Program简介 - 用Anchor玩转代币！🪙
+﻿# 01-Token Program简介 - 用Anchor玩转代币！🪙
 
 嘿，小伙伴！👋
 
@@ -218,5 +218,5 @@ pub struct CreateToken<'info> {
 ---
 
 **最后更新**：2026年1月9日  
-**制作风格**：莫式风格  
+**制作人**：bruceCao  
 **学习建议**：这一章是基础，务必理解三种账户的创建方式！

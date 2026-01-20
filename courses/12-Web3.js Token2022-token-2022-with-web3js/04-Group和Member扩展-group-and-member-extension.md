@@ -63,4 +63,4 @@ const memberMint = await createMintAsMember(
 ---
 
 **最后更新**：2026年1月9日  
-**制作风格**：莫式风格
+**制作人**：bruceCao

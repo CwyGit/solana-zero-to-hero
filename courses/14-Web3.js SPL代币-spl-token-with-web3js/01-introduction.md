@@ -1,4 +1,4 @@
-# 01-Web3.js SPL代币简介 - 用JavaScript玩转SPL！💻
+﻿# 01-Web3.js SPL代币简介 - 用JavaScript玩转SPL！💻
 
 嘿，小伙伴！👋
 
@@ -45,4 +45,4 @@
 ---
 
 **最后更新**：2026年1月10日  
-**制作风格**：莫式风格
+**制作人**：bruceCao

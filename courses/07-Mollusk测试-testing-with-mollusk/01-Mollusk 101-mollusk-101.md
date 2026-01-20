@@ -1,4 +1,4 @@
-# 01-Mollusk 101 - 轻量级测试框架！🧪
+﻿# 01-Mollusk 101 - 轻量级测试框架！🧪
 
 嘿，小伙伴！👋
 
@@ -399,7 +399,7 @@ mollusk.process_and_validate_instruction(
 ---
 
 **最后更新**：2026年1月9日  
-**制作风格**：莫式风格  
+**制作人**：bruceCao  
 **学习建议**：先掌握基本用法，再深入高级功能！
 
 **提示**：完整的代码示例请参考[Mollusk文档](https://github.com/anza-xyz/mollusk)！

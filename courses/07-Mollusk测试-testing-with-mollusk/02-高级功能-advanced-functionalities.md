@@ -1,4 +1,4 @@
-# 02-高级功能 - Mollusk的强大工具箱！🧰
+﻿# 02-高级功能 - Mollusk的强大工具箱！🧰
 
 嘿，小伙伴！👋
 
@@ -357,7 +357,7 @@ mollusk.warp_to_slot(1000);
 ---
 
 **最后更新**：2026年1月9日  
-**制作风格**：莫式风格  
+**制作人**：bruceCao  
 **学习建议**：这章功能很多，先掌握常用的，其他用到再深入！
 
 **提示**：完整的API文档和更多示例请参考[Mollusk GitHub](https://github.com/anza-xyz/mollusk)！

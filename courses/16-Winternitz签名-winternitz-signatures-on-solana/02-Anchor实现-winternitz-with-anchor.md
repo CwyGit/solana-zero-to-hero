@@ -1,4 +1,4 @@
-# 02-Anchor实现Winternitz - 类型安全！⚓
+﻿# 02-Anchor实现Winternitz - 类型安全！⚓
 
 嘿，小伙伴！👋
 
@@ -36,4 +36,4 @@ pub struct VerifyWinternitz<'info> {
 ---
 
 **最后更新**：2026年1月10日  
-**制作风格**：莫式风格
+**制作人**：bruceCao

@@ -1,4 +1,4 @@
-# 03-Metaplex Core - 新一代NFT方案！🚀
+﻿# 03-Metaplex Core - 新一代NFT方案！🚀
 
 嘿，小伙伴！👋
 
@@ -405,5 +405,5 @@ pub fn list_plugins(account: &AccountInfo) -> Result<Vec<PluginType>, ProgramErr
 ---
 
 **最后更新**：2026年1月9日  
-**制作风格**：莫式风格  
+**制作人**：bruceCao  
 **学习建议**：Core是未来趋势，新项目建议使用Core而非Token Metadata！

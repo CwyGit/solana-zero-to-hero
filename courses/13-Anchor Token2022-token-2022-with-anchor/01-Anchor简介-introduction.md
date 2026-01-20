@@ -1,4 +1,4 @@
-# 01-Anchor Token2022简介 - 用Anchor玩转Token2022！⚓
+﻿# 01-Anchor Token2022简介 - 用Anchor玩转Token2022！⚓
 
 嘿，小伙伴！👋
 
@@ -44,4 +44,4 @@
 ---
 
 **最后更新**：2026年1月9日  
-**制作风格**：莫式风格
+**制作人**：bruceCao

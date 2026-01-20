@@ -1,4 +1,4 @@
-# 04-Solana简介 - 深入了解Solana的核心概念！⚡
+﻿# 04-Solana简介 - 深入了解Solana的核心概念！⚡
 
 在Solana上进行开发之前，您需要了解一些使Solana独特的基本概念。
 
@@ -606,5 +606,5 @@ token_program::cpi::transfer(cpi_ctx, amount)?;
 ---
 
 **最后更新**：2026年1月9日  
-**制作风格**：莫式风格  
+**制作人**：bruceCao  
 **学习建议**：这章概念密集，建议边学边实践，动手写代码效果最好！

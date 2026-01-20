@@ -1,4 +1,4 @@
-# 测试你的 Anchor 程序 - 代码的"安全网" 🛡️
+﻿# 测试你的 Anchor 程序 - 代码的"安全网" 🛡️
 
 嘿，小伙伴！👋
 
@@ -404,5 +404,5 @@ const connection = new Connection("http://localhost:8899", "confirmed");
 ---
 
 **最后更新**：2026年1月9日  
-**制作风格**：莫式风格  
+**制作人**：bruceCao  
 **学习建议**：测试是必须掌握的技能，从 TypeScript 测试开始练习！

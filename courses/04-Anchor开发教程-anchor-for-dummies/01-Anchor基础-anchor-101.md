@@ -1,4 +1,4 @@
-# Anchor 101 - 你的 Solana 开发利器 ⚓
+﻿# Anchor 101 - 你的 Solana 开发利器 ⚓
 
 嘿，小伙伴！👋
 
@@ -323,4 +323,4 @@ pub enum VaultError {
 ---
 
 **最后更新**：2026年1月9日  
-**制作风格**：莫式风格
+**制作人**：bruceCao

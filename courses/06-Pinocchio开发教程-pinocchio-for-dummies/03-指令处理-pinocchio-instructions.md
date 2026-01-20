@@ -1,4 +1,4 @@
-# 03-指令处理 - 高效的指令系统！📋
+﻿# 03-指令处理 - 高效的指令系统！📋
 
 嘿，小伙伴！👋
 
@@ -350,5 +350,5 @@ pub fn process_update_status(&mut self) -> ProgramResult {
 ---
 
 **最后更新**：2026年1月9日  
-**制作风格**：莫式风格  
+**制作人**：bruceCao  
 **学习建议**：TryFrom模式是Pinocchio的核心，一定要掌握！

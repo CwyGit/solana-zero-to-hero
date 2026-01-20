@@ -1,4 +1,4 @@
-# 01-Pinocchio 101 - 原生开发入门！🎯
+﻿# 01-Pinocchio 101 - 原生开发入门！🎯
 
 嘿，小伙伴！👋
 
@@ -421,5 +421,5 @@ impl<'a> TryFrom<&'a [u8]> for DepositInstructionData {
 ---
 
 **最后更新**：2026年1月9日  
-**制作风格**：莫式风格  
+**制作人**：bruceCao  
 **学习建议**：先掌握Anchor，再学Pinocchio，循序渐进！

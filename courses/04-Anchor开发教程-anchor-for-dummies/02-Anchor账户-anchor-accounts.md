@@ -1,4 +1,4 @@
-# Anchor 账户 - 理解 Solana 的"数据仓库" 📦
+﻿# Anchor 账户 - 理解 Solana 的"数据仓库" 📦
 
 嘿，小伙伴！👋
 
@@ -957,5 +957,5 @@ await program.methods.someMethod().accounts({
 ---
 
 **最后更新**：2026年1月9日  
-**制作风格**：莫式风格  
+**制作人**：bruceCao  
 **学习建议**：本章内容较多，建议分2-3次学习，每次1小时左右

@@ -1,4 +1,4 @@
-# Anchor 指令与 CPI - 程序的"功能菜单" 📋
+﻿# Anchor 指令与 CPI - 程序的"功能菜单" 📋
 
 嘿，小伙伴！👋
 
@@ -625,5 +625,5 @@ pub fn handle_errors(ctx: Context<HandleErrors>, value: u64) -> Result<()> {
 ---
 
 **最后更新**：2026年1月9日  
-**制作风格**：莫式风格  
+**制作人**：bruceCao  
 **学习建议**：本章是 Anchor 开发的核心，建议多练习写指令！
