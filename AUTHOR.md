@@ -9,7 +9,7 @@ Solana 开发者 | Web3 布道者
 ## 📱 联系方式
 
 ### 微信号
-**zgrbuce**
+**zgrbruce123**
 
 ### Twitter / X
 **[@sycbruce](https://twitter.com/sycbruce)**
