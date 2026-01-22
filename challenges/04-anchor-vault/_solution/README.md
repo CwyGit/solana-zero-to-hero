@@ -1,116 +1,191 @@
-# 🎯 Anchor金库挑战 - 参考答案
+# 🏦 Anchor 金库挑战 - 莫式风格完整教程
 
-嘿，小伙伴！👋
+嘿，小伙伴！👋 这是一份**手把手教你完成 Anchor 金库挑战**的教程！
 
-这是 **Anchor Vault（金库）** 挑战的完整参考答案！
-
-**比喻说明**：金库就像银行的保险箱，用户可以存入和取出代币，程序负责安全管理！
+**比喻说明**：金库就像银行的保险箱，你存钱进去，只有你能取出来！
 
 ---
 
-## 📋 题目回顾
+## 📋 挑战概览
 
-**目标**：使用 Anchor 框架实现一个安全的代币金库系统
+| 项目 | 内容 |
+|------|------|
+| **挑战名称** | Anchor 金库 |
+| **难度** | ⭐⭐（入门） |
+| **预计时间** | 30分钟 |
+| **目标** | 完成 2/2 测试 |
 
-**核心功能**：
-1. **存款（Deposit）**：用户存入 SOL 到金库
-2. **取款（Withdraw）**：用户从金库取回 SOL
-
----
-
-## 🧠 解题思路
-
-### 第一步：分析需求
-
-**疑问**：金库需要存储什么？
-
-1. **金库 PDA**：存放 SOL 的账户（无私钥，程序控制）
-2. **用户关联**：每个用户有自己的金库
-
-**比喻**：就像银行，每个客户有自己的保险箱编号！
-
----
-
-### 第二步：设计架构
+### 🎯 两个挑战
 
 ```
-用户钱包 ←→ 金库程序 ←→ 金库PDA账户
-                ↓
-           安全验证
+挑战1: 存款 (Deposit)
+└── 允许用户将 SOL 存入他们自己的保险库
+
+挑战2: 取款 (Withdraw)  
+└── 允许保险库所有者从保险库中提取 SOL
 ```
 
-**PDA 种子设计**：
-- `seeds = [b"vault", user.key().as_ref()]`
-- 每个用户有唯一的金库地址
+---
+
+## 🧠 核心概念
+
+### 什么是 PDA？
+
+**PDA = Program Derived Address**（程序派生地址）
+
+```
+普通钱包：有私钥，人控制
+PDA账户：无私钥，程序控制 ← 我们用这个做金库！
+```
+
+**比喻**：PDA就像银行帮你开的保险箱，只有银行（程序）能打开，但里面的钱是你的！
+
+### 金库工作流程
+
+```mermaid
+sequenceDiagram
+    participant 用户
+    participant 程序
+    participant 金库PDA
+    
+    用户->>程序: 1. deposit(100 SOL)
+    程序->>金库PDA: 转入 100 SOL
+    Note over 金库PDA: 安全存储
+    
+    用户->>程序: 2. withdraw()
+    程序->>用户: 返回 100 SOL
+    Note over 金库PDA: 余额清零
+```
 
 ---
 
-### 第三步：指令设计
+## 🔧 Step 1: 项目结构
 
-| 指令 | 功能 | 关键点 |
-|------|------|--------|
-| `deposit` | 存入SOL | 系统转账到PDA |
-| `withdraw` | 取出SOL | PDA签名转账 |
+### 创建目录
+
+```
+anchor-vault/
+├── Anchor.toml              # Anchor 配置
+├── Cargo.toml               # 工作空间
+└── programs/
+    └── blueshift_anchor_vault/
+        ├── Cargo.toml       # 程序依赖
+        └── src/
+            └── lib.rs       # ⭐ 核心代码
+```
+
+### Cargo.toml (程序)
+
+```toml
+[package]
+name = "blueshift-anchor-vault"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib", "lib"]
+name = "blueshift_anchor_vault"
+
+[dependencies]
+anchor-lang = "0.32.1"
+```
+
+### Anchor.toml
+
+```toml
+[toolchain]
+channel = "1.79.0"
+anchor_version = "0.32.1"
+
+[programs.localnet]
+blueshift_anchor_vault = "22222222222222222222222222222222222222222222"
+
+[provider]
+cluster = "Localnet"
+wallet = "~/.config/solana/id.json"
+```
+
+> ⚠️ **重要**：Program ID 必须是 `22222222222222222222222222222222222222222222`！
 
 ---
 
-## 💻 完整代码
+## 🔧 Step 2: 编写核心代码
 
-### 1. 程序入口 `lib.rs`
+### 完整的 lib.rs
 
 ```rust
 use anchor_lang::prelude::*;
+use anchor_lang::system_program::{transfer, Transfer};
 
-declare_id!("Your_Program_ID_Here");
+// ⚠️ 必须使用这个 Program ID！
+declare_id!("22222222222222222222222222222222222222222222");
 
 #[program]
-pub mod anchor_vault {
+pub mod blueshift_anchor_vault {
     use super::*;
 
+    /// 存款指令
     pub fn deposit(ctx: Context<VaultAction>, amount: u64) -> Result<()> {
-        // 系统转账：用户 → 金库
-        let cpi_context = CpiContext::new(
-            ctx.accounts.system_program.to_account_info(),
-            anchor_lang::system_program::Transfer {
-                from: ctx.accounts.signer.to_account_info(),
-                to: ctx.accounts.vault.to_account_info(),
-            },
+        // 检查金库是否为空
+        require_eq!(
+            ctx.accounts.vault.lamports(),
+            0,
+            VaultError::VaultAlreadyExists
         );
-        anchor_lang::system_program::transfer(cpi_context, amount)?;
-        
-        msg!("存款成功！金额: {} lamports", amount);
+
+        // 确保金额超过租金豁免最低值
+        require_gt!(
+            amount,
+            Rent::get()?.minimum_balance(0),
+            VaultError::InvalidAmount
+        );
+
+        // CPI 转账：用户 → 金库
+        transfer(
+            CpiContext::new(
+                ctx.accounts.system_program.to_account_info(),
+                Transfer {
+                    from: ctx.accounts.signer.to_account_info(),
+                    to: ctx.accounts.vault.to_account_info(),
+                },
+            ),
+            amount,
+        )?;
+
         Ok(())
     }
 
-    pub fn withdraw(ctx: Context<VaultAction>, amount: u64) -> Result<()> {
-        // PDA签名转账：金库 → 用户
-        let signer_seeds: &[&[&[u8]]] = &[&[
-            b"vault",
-            ctx.accounts.signer.key.as_ref(),
-            &[ctx.bumps.vault],
-        ]];
-
-        let cpi_context = CpiContext::new_with_signer(
-            ctx.accounts.system_program.to_account_info(),
-            anchor_lang::system_program::Transfer {
-                from: ctx.accounts.vault.to_account_info(),
-                to: ctx.accounts.signer.to_account_info(),
-            },
-            signer_seeds,
+    /// 取款指令
+    pub fn withdraw(ctx: Context<VaultAction>) -> Result<()> {
+        // 检查金库有余额
+        require_neq!(
+            ctx.accounts.vault.lamports(),
+            0,
+            VaultError::InvalidAmount
         );
-        anchor_lang::system_program::transfer(cpi_context, amount)?;
-        
-        msg!("取款成功！金额: {} lamports", amount);
+
+        // PDA 签名种子
+        let signer_key = ctx.accounts.signer.key();
+        let signer_seeds = &[b"vault", signer_key.as_ref(), &[ctx.bumps.vault]];
+
+        // CPI 转账：金库 → 用户（PDA签名）
+        transfer(
+            CpiContext::new_with_signer(
+                ctx.accounts.system_program.to_account_info(),
+                Transfer {
+                    from: ctx.accounts.vault.to_account_info(),
+                    to: ctx.accounts.signer.to_account_info(),
+                },
+                &[&signer_seeds[..]]
+            ),
+            ctx.accounts.vault.lamports()
+        )?;
+
         Ok(())
     }
 }
-```
 
----
-
-### 2. 账户结构
-
-```rust
+/// 账户结构
 #[derive(Accounts)]
 pub struct VaultAction<'info> {
     #[account(mut)]
@@ -125,194 +200,178 @@ pub struct VaultAction<'info> {
 
     pub system_program: Program<'info, System>,
 }
-```
 
-**小伙伴们要特别注意啦**：
-
-| 字段 | 说明 | 约束 |
-|------|------|------|
-| `signer` | 操作者，必须是签名者 | `mut` 因为要扣款 |
-| `vault` | 金库PDA | `seeds` + `bump` 验证 |
-| `system_program` | 系统程序 | 用于转账 |
-
----
-
-### 3. 可选：金库状态账户
-
-如果需要记录存款历史或状态：
-
-```rust
-#[account]
-#[derive(InitSpace)]
-pub struct VaultState {
-    pub owner: Pubkey,
-    pub total_deposited: u64,
-    pub bump: u8,
+/// 错误类型
+#[error_code]
+pub enum VaultError {
+    #[msg("Vault already exists")]
+    VaultAlreadyExists,
+    #[msg("Invalid amount")]
+    InvalidAmount,
 }
 ```
 
 ---
 
-## 🔑 关键点解析
+## 🔧 Step 3: 代码详解
 
-### 1. PDA签名的魔法
-
-**疑问**：PDA没有私钥，怎么签名？
-
-**答案**：使用 `invoke_signed` 或 Anchor 的 `CpiContext::new_with_signer`！
+### 3.1 存款核心逻辑
 
 ```rust
-// 关键：提供 signer_seeds
-let signer_seeds: &[&[&[u8]]] = &[&[
-    b"vault",                        // 种子1
-    ctx.accounts.signer.key.as_ref(), // 种子2
-    &[ctx.bumps.vault],              // bump字节
-]];
+// 1️⃣ 检查金库是否为空（防止重复存款）
+require_eq!(ctx.accounts.vault.lamports(), 0, VaultError::VaultAlreadyExists);
 ```
 
-**比喻**：程序知道金库的"密码"（种子+bump），可以代表金库签名！
-
----
-
-### 2. 为什么用 SystemAccount？
-
-**选择**：
-- `SystemAccount<'info>` - 只存 SOL，无自定义数据
-- `Account<'info, VaultState>` - 存 SOL + 自定义数据
-
-**本挑战用 SystemAccount 就够了**，因为只需要存取 SOL！
-
----
-
-### 3. 存款 vs 取款的区别
-
-| 操作 | 谁付款 | 谁签名 | CPI方法 |
-|------|--------|--------|---------|
-| 存款 | 用户 | 用户 | `CpiContext::new` |
-| 取款 | 金库PDA | 程序代签 | `CpiContext::new_with_signer` |
-
----
-
-## ⚠️ 常见错误
-
-### 错误1：忘记 `mut` 约束
+**为什么？** 每个用户只能有一个金库！
 
 ```rust
-// ❌ 错误
-pub signer: Signer<'info>,
-
-// ✅ 正确
-#[account(mut)]
-pub signer: Signer<'info>,
+// 2️⃣ 检查金额是否足够（大于租金豁免最低值）
+require_gt!(amount, Rent::get()?.minimum_balance(0), VaultError::InvalidAmount);
 ```
 
-**原因**：转账会改变账户余额，必须标记为可变！
-
----
-
-### 错误2：PDA签名种子顺序错误
+**为什么？** Solana 账户需要支付"租金"才能保持激活！
 
 ```rust
-// ❌ 错误：顺序必须和 seeds 定义一致
-let signer_seeds = &[&[
-    ctx.accounts.signer.key.as_ref(), // 顺序错了！
-    b"vault",
-    &[ctx.bumps.vault],
-]];
-
-// ✅ 正确
-let signer_seeds = &[&[
-    b"vault",
-    ctx.accounts.signer.key.as_ref(),
-    &[ctx.bumps.vault],
-]];
+// 3️⃣ 执行转账（用户 → 金库）
+transfer(CpiContext::new(...), amount)?;
 ```
 
 ---
 
-### 错误3：余额不足未检查
+### 3.2 取款核心逻辑
 
 ```rust
-// ✅ 添加余额检查
-require!(
-    ctx.accounts.vault.lamports() >= amount,
-    VaultError::InsufficientFunds
-);
+// 1️⃣ PDA 签名种子
+let signer_seeds = &[b"vault", signer_key.as_ref(), &[ctx.bumps.vault]];
 ```
 
----
-
-## ✅ 自测清单
-
-### 编译检查
-- [ ] `anchor build` 成功
-- [ ] 无编译警告
-
-### 功能检查
-- [ ] 存款后金库余额增加
-- [ ] 取款后用户余额增加
-- [ ] 只有所有者能取款
-
-### 安全检查
-- [ ] PDA种子包含用户公钥
-- [ ] 取款使用PDA签名
-- [ ] 余额不足时正确报错
-
----
-
-## 💡 进阶思考
-
-### 如何支持多种代币？
-
-使用 `anchor_spl::token` 替代系统转账：
+**关键点**：种子顺序必须和 `seeds = [...]` 定义一致！
 
 ```rust
-use anchor_spl::token::{Token, TokenAccount, transfer};
+// 2️⃣ PDA 签名转账
+transfer(
+    CpiContext::new_with_signer(..., &[&signer_seeds[..]]),
+    ctx.accounts.vault.lamports()  // 取出全部
+)?;
+```
 
+**比喻**：程序用"密码"（种子）代表金库签名，授权所有人取款！
+
+---
+
+### 3.3 账户约束解析
+
+```rust
 #[account(
-    mut,
-    associated_token::mint = mint,
-    associated_token::authority = vault,
+    mut,                              // 可变（要修改余额）
+    seeds = [b"vault", signer.key().as_ref()],  // PDA种子
+    bump,                             // 自动计算bump
 )]
-pub vault_ata: Account<'info, TokenAccount>,
+pub vault: SystemAccount<'info>,
 ```
+
+| 约束 | 作用 |
+|------|------|
+| `mut` | 允许修改账户 |
+| `seeds` | 定义 PDA 派生规则 |
+| `bump` | 自动使用有效的 bump 值 |
 
 ---
 
-### 如何添加取款限额？
+## 🔧 Step 4: 构建程序
 
-在状态账户中记录限额：
-
-```rust
-#[account]
-pub struct VaultState {
-    pub daily_limit: u64,
-    pub withdrawn_today: u64,
-    pub last_withdrawal_day: i64,
-}
-```
-
----
-
-## 🎯 运行测试
+### WSL 中执行
 
 ```bash
-# 构建程序
-anchor build
+# 进入项目目录
+cd /mnt/h/你的项目路径/anchor-vault
 
-# 运行测试
-anchor test
+# 构建 SBF 程序
+/home/你的用户名/.local/share/solana/install/active_release/bin/cargo-build-sbf \
+  --sbf-out-dir ./target/deploy
+```
 
-# 部署到 devnet
-anchor deploy --provider.cluster devnet
+### PowerShell 一键命令
+
+```powershell
+wsl -d Ubuntu-24.04 -- bash -lc "cd /mnt/h/项目路径 && cargo-build-sbf"
 ```
 
 ---
 
-**现在小伙伴们懂了吧？** 金库挑战的核心就是 PDA + 系统转账！🏦
+## 🔧 Step 5: 提交测试
+
+### 找到 .so 文件
+
+```
+target/deploy/blueshift_anchor_vault.so
+```
+
+### 提交到 Blueshift
+
+1. 访问 https://learn.blueshift.gg/zh-CN/challenges/anchor-vault/verify
+2. 点击上传区域
+3. 选择 `.so` 文件
+4. 等待测试结果
+
+### 期望结果
+
+```
+✅ 挑战1：接受存款 - 通过
+✅ 挑战2：允许提取 - 通过
+
+恭喜！2/2 测试通过！🎉
+```
+
+---
+
+## ⚠️ 常见错误排查
+
+### 错误1：0/2 测试失败
+
+**可能原因**：
+- Program ID 不是 `222...222`
+- signer_seeds 格式错误
+
+**解决**：
+```rust
+// ✅ 正确的 signer_seeds 格式
+let signer_seeds = &[b"vault", signer_key.as_ref(), &[ctx.bumps.vault]];
+transfer(..., &[&signer_seeds[..]]);
+```
+
+### 错误2：编译失败
+
+**可能原因**：Rust 版本不兼容
+
+**解决**：使用 Solana 自带的 cargo-build-sbf
+
+---
+
+## 📚 知识总结
+
+| 概念 | 说明 |
+|------|------|
+| PDA | 程序派生地址，无私钥，程序控制 |
+| CPI | 跨程序调用，调用系统程序转账 |
+| seeds | PDA派生种子，决定地址唯一性 |
+| bump | 使地址落在曲线外的偏移值 |
+
+---
+
+## ✅ 完成检查清单
+
+- [ ] Program ID 设置为 `222...222`
+- [ ] deposit 检查金库为空
+- [ ] deposit 检查金额大于租金最低值
+- [ ] withdraw 使用 PDA 签名
+- [ ] signer_seeds 格式正确
+- [ ] 成功编译 .so 文件
+- [ ] 提交后 2/2 测试通过
 
 ---
 
 **制作人**：bruceCao  
-**最后更新**：2026年1月21日  
-**难度**：⭐⭐（入门）
+**微信**：zgrbruce123  
+**Twitter**：[@sycbruce](https://twitter.com/sycbruce)  
+**最后更新**：2026年1月22日
